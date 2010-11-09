@@ -215,7 +215,7 @@ def cache_tree_children(queryset):
 
     Returns a list of top-level nodes.
     """
-    
+
     current_path = []
     top_nodes = []
     if queryset:
@@ -224,12 +224,12 @@ def cache_tree_children(queryset):
             node_level = obj.get_level()
             if node_level < root_level:
                 raise ValueError, "cache_tree_children was passed nodes in the wrong order!"
-            
+
             obj._cached_children = []
 
             while len(current_path) > node_level - root_level:
                 current_path.pop(-1)
-            
+
             if node_level == root_level:
                 top_nodes.append(obj)
             else:
@@ -242,7 +242,7 @@ class RecurseTreeNode(template.Node):
     def __init__(self, template_nodes, queryset_var):
         self.template_nodes = template_nodes
         self.queryset_var = queryset_var
-        
+
     def _render_node(self, context, node):
         bits = []
         context.push()
@@ -254,7 +254,7 @@ class RecurseTreeNode(template.Node):
         rendered = self.template_nodes.render(context)
         context.pop()
         return rendered
-    
+
     def render(self, context):
         queryset = self.queryset_var.resolve(context)
         roots = cache_tree_children(queryset)
@@ -268,10 +268,10 @@ def recursetree(parser, token):
     Iterates over the nodes in the tree, and renders the contained block for each node.
     This tag will recursively render children into the template variable {{ children }}.
     Only one database query is required (children are cached for the whole tree)
-    
+
     Usage:
             <ul>
-                {% iteratetree nodes %}
+                {% recursetree nodes %}
                     <li>
                         {{ node.name }}
                         {% if not node.is_leaf_node %}
@@ -280,16 +280,16 @@ def recursetree(parser, token):
                             </ul>
                         {% endif %}
                     </li>
-                {% enditeratetree %}
+                {% endrecursetree %}
             </ul>
     """
     bits = token.contents.split()
     if len(bits) != 2:
         raise template.TemplateSyntaxError(_('%s tag requires a queryset') % bits[0])
-    
+
     queryset_var = template.Variable(bits[1])
-    
+
     template_nodes = parser.parse(('endrecursetree',))
     parser.delete_first_token()
-    
+
     return RecurseTreeNode(template_nodes, queryset_var)
