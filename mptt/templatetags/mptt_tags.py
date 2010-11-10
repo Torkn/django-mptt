@@ -219,8 +219,10 @@ def cache_tree_children(queryset):
     current_path = []
     top_nodes = []
     if queryset:
-        root_level = queryset[0].get_level()
+        root_level = None
         for obj in queryset:
+            if root_level == None:
+                root_level = obj.get_level()
             node_level = obj.get_level()
             if node_level < root_level:
                 raise ValueError, "cache_tree_children was passed nodes in the wrong order!"
