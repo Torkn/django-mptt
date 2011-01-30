@@ -217,13 +217,13 @@ def cache_tree_children(queryset):
 
     current_path = []
     top_nodes = []
-    
+
     if hasattr(queryset, 'order_by'):
         mptt_opts = queryset.model._mptt_meta
         tree_id_attr = mptt_opts.tree_id_attr
         left_attr = mptt_opts.left_attr
         queryset = queryset.order_by(tree_id_attr, left_attr)
-    
+
     if queryset:
         root_level = None
         for obj in queryset:

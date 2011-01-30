@@ -24,7 +24,7 @@ MPTT_ADMIN_LEVEL_INDENT = getattr(settings, 'MPTT_ADMIN_LEVEL_INDENT', 10)
 def mptt_items_for_result(cl, result, form):
     first = True
     pk = cl.lookup_opts.pk.attname
-    
+
     # figure out which field to indent
     mptt_indent_field = None
     for field_name in cl.list_display:
@@ -40,7 +40,7 @@ def mptt_items_for_result(cl, result, form):
             # first model field, use this one
             mptt_indent_field = field_name
             break
-    
+
     for field_name in cl.list_display:
         row_class = ''
         f = None
@@ -117,13 +117,13 @@ def mptt_items_for_result(cl, result, form):
                 result_repr = escape(field_val)
         if force_unicode(result_repr) == '':
             result_repr = mark_safe('&nbsp;')
-        
+
         if field_name == mptt_indent_field:
             level = getattr(result, result._mptt_meta.level_attr)
             padding_attr = ' style="padding-left:%spx"' % (5 + MPTT_ADMIN_LEVEL_INDENT * level)
         else:
             padding_attr = ''
-        
+
         # If list_display_links not defined, add the link tag to the first field
         if (first and not cl.list_display_links) or field_name in cl.list_display_links:
             table_tag = {True:'th', False:'td'}[first]
@@ -169,6 +169,6 @@ def mptt_result_list(cl):
     return {'cl': cl,
             'result_headers': list(result_headers(cl)),
             'results': list(mptt_results(cl))}
-            
+
 # custom template is merely so we can strip out sortable-ness from the column headers
 mptt_result_list = register.inclusion_tag("admin/mptt_change_list_results.html")(mptt_result_list)

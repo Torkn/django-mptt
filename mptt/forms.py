@@ -33,12 +33,12 @@ class TreeNodeChoiceField(forms.ModelChoiceField):
 
 class TreeNodeMultipleChoiceField(TreeNodeChoiceField, forms.ModelMultipleChoiceField):
     """A ModelMultipleChoiceField for tree nodes."""
-    
+
     def __init__(self, *args, **kwargs):
         self.level_indicator = kwargs.pop('level_indicator', u'---')
         if kwargs.get('required', True) and not 'empty_label' in kwargs:
             kwargs['empty_label'] = None
-        
+
         # For some reason ModelMultipleChoiceField constructor passes kwargs
         # as args to its super(), which causes 'multiple values for keyword arg'
         # error sometimes. So we skip it (that constructor does nothing anyway!)

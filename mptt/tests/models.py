@@ -32,7 +32,7 @@ class MultiOrder(MPTTModel):
     size = models.PositiveIntegerField()
     date = models.DateField()
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
-    
+
     class MPTTMeta:
         order_insertion_by = ['name', 'size', 'date']
 
@@ -41,7 +41,7 @@ class MultiOrder(MPTTModel):
 
 class Node(MPTTModel):
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
-    
+
     class MPTTMeta:
         left_attr = 'does'
         right_attr = 'zis'
@@ -51,7 +51,7 @@ class Node(MPTTModel):
 class OrderedInsertion(MPTTModel):
     name = models.CharField(max_length=50)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
-    
+
     class MPTTMeta:
         order_insertion_by = ['name']
 
@@ -64,14 +64,14 @@ class Tree(MPTTModel):
 class Person(MPTTModel):
     name = models.CharField(max_length=50)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
-    
+
     # just testing it's actually possible to override the tree manager
     objects = models.Manager()
     my_tree_manager = CustomTreeManager()
-    
+
     class MPTTMeta:
         tree_manager_attr = 'my_tree_manager'
-    
+
     def __unicode__(self):
         return self.name
 

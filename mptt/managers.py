@@ -50,14 +50,14 @@ class TreeManager(models.Manager):
         """
         super(TreeManager, self).__init__()
         self._mptt_opts = mptt_opts
-        
+
         # these get populated during init_from_model
         self.parent_attr = None
         self.left_attr = None
         self.right_attr = None
         self.tree_id_attr = None
         self.level_attr = None
-    
+
     def init_from_model(self, model):
         """
         Sets things up. This would normally be done in contribute_to_class(),
@@ -66,13 +66,13 @@ class TreeManager(models.Manager):
         """
         if self._mptt_opts is None:
             self._mptt_opts = model._mptt_meta
-        
+
         self.parent_attr = self._mptt_opts.parent_attr
         self.left_attr = self._mptt_opts.left_attr
         self.right_attr = self._mptt_opts.right_attr
         self.tree_id_attr = self._mptt_opts.tree_id_attr
         self.level_attr = self._mptt_opts.level_attr
-        
+
         # Avoid calling "get_field_by_name()", which populates the related
         # models cache and can cause circular imports in complex projects.
         # Instead, find the tree_id field using "get_fields_with_model()".
@@ -83,7 +83,7 @@ class TreeManager(models.Manager):
         else:
             self.tree_model = model
             self._base_manager = None
-    
+
     def _translate_lookups(self, **lookups):
         new_lookups = {}
         for k, v in lookups.items():
@@ -93,29 +93,29 @@ class TreeManager(models.Manager):
                 new_parts.append(getattr(self, '%s_attr' % part, part))
             new_lookups['__'.join(new_parts)] = v
         return new_lookups
-    
+
     def _mptt_filter(self, qs=None, **filters):
         """
         Like self.filter(), but translates name-agnostic filters for MPTT fields.
         """
         if self._base_manager:
             return self._base_manager._mptt_filter(qs=qs, **filters)
-        
+
         if qs is None:
             qs = self.get_query_set()
         return qs.filter(**self._translate_lookups(**filters))
-    
+
     def _mptt_update(self, qs=None, **items):
         """
         Like self.update(), but translates name-agnostic MPTT fields.
         """
         if self._base_manager:
             return self._base_manager._mptt_update(qs=qs, **items)
-        
+
         if qs is None:
             qs = self.get_query_set()
         return qs.update(**self._translate_lookups(**items))
-    
+
     def _get_connection(self, node):
         if connections is None:
             return connection
@@ -191,10 +191,10 @@ class TreeManager(models.Manager):
         If ``save`` is ``True``, ``node``'s ``save()`` method will be
         called before it is returned.
         """
-        
+
         if self._base_manager:
             return self._base_manager.insert_node(node, target, position=position, save=save)
-        
+
         if node.pk and not allow_existing_pk and self.filter(pk=node.pk).exists():
             raise ValueError(_('Cannot insert a node which has already been saved.'))
 
@@ -235,7 +235,7 @@ class TreeManager(models.Manager):
             setattr(node, self.level_attr, -level)
             setattr(node, self.tree_id_attr, tree_id)
             setattr(node, self.parent_attr, parent)
-    
+
             if parent:
                 self._post_insert_update_cached_parent_right(parent, right_shift)
 
@@ -262,10 +262,10 @@ class TreeManager(models.Manager):
         of a root node, as this is a special case due to our use of tree
         ids to order root nodes.
         """
-        
+
         if self._base_manager:
             return self._base_manager.move_node(node, target, position=position)
-        
+
         if target is None:
             if node.is_child_node():
                 self._make_child_root_node(node)
@@ -284,7 +284,7 @@ class TreeManager(models.Manager):
         """
         if self._base_manager:
             return self._base_manager.root_node(tree_id)
-        
+
         return self._mptt_filter(tree_id=tree_id, parent__isnull=True).get()
 
     def root_nodes(self):
@@ -293,19 +293,19 @@ class TreeManager(models.Manager):
         """
         if self._base_manager:
             return self._base_manager.root_nodes()
-        
+
         return self._mptt_filter(parent__isnull=True)
 
     def rebuild(self):
         """
         Rebuilds whole tree in database using `parent` link.
         """
-        
+
         if self._base_manager:
             return self._base_manager.rebuild()
-        
+
         opts = self.model._mptt_meta
-        
+
         qs = self._mptt_filter(parent__isnull=True)
         if opts.order_insertion_by:
             qs = qs.order_by(*opts.order_insertion_by)
@@ -316,7 +316,7 @@ class TreeManager(models.Manager):
             idx += 1
             self._rebuild_helper(pk, 1, idx)
         transaction.commit_unless_managed()
-        
+
     def _post_insert_update_cached_parent_right(self, instance, right_shift):
         setattr(instance, self.right_attr, getattr(instance, self.right_attr) + right_shift)
         attr = '_%s_cache' % self.parent_attr
@@ -328,15 +328,15 @@ class TreeManager(models.Manager):
     def _rebuild_helper(self, pk, left, tree_id, level=0):
         opts = self.model._mptt_meta
         right = left + 1
-        
+
         qs = self._mptt_filter(parent__pk=pk)
         if opts.order_insertion_by:
             qs = qs.order_by(*opts.order_insertion_by)
         child_ids = qs.values_list('pk', flat=True)
-        
+
         for child_id in child_ids:
             right = self._rebuild_helper(child_id, right, tree_id, level+1)
-        
+
         qs = self.model._default_manager.filter(pk=pk)
         self._mptt_update(qs,
             left=left,
@@ -344,9 +344,9 @@ class TreeManager(models.Manager):
             level=level,
             tree_id=tree_id
         )
-        
+
         return right + 1
-            
+
     def _calculate_inter_tree_move_values(self, node, target, position):
         """
         Calculates values required when moving ``node`` relative to
@@ -376,11 +376,11 @@ class TreeManager(models.Manager):
             raise ValueError(_('An invalid position was given: %s.') % position)
 
         left_right_change = left - space_target - 1
-        
+
         right_shift = 0
         if parent:
             right_shift = 2 * (node.get_descendant_count() + 1)
-        
+
         return space_target, level_change, left_right_change, parent, right_shift
 
     def _close_gap(self, size, target, tree_id):
@@ -412,7 +412,7 @@ class TreeManager(models.Manager):
         """
         qs = self.get_query_set()
         max_tree_id = qs.aggregate(Max(self.tree_id_attr)).values()[0]
-        
+
         max_tree_id = max_tree_id or 0
         return max_tree_id + 1
 
@@ -673,7 +673,7 @@ class TreeManager(models.Manager):
         setattr(node, self.level_attr, level - level_change)
         setattr(node, self.tree_id_attr, new_tree_id)
         setattr(node, self.parent_attr, parent)
-        
+
         node._mptt_cached_fields[self.parent_attr] = parent.pk
 
     def _move_child_within_tree(self, node, target, position):

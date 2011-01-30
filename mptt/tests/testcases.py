@@ -14,7 +14,7 @@ def get_tree_details(nodes):
     The fields are:
         id  parent_id  tree_id  level  left  right
     """
-    
+
     opts = nodes[0]._mptt_meta
     return '\n'.join(['%s %s %s %s %s %s' %
                       (n.pk, getattr(n, '%s_id' % opts.parent_attr) or '-',
@@ -204,7 +204,7 @@ class ReparentingTestCase(TestCase):
                                          9 - 2 0 1 6
                                          10 9 2 1 2 3
                                          11 9 2 1 4 5"""))
-        
+
     def test_move_to(self):
         rpg = Genre.objects.get(pk=9)
         action = Genre.objects.get(pk=1)
