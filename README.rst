@@ -1,10 +1,15 @@
-========
-Overview
-========
+===========
+django-mptt
+===========
 
-.. contents::
-   :depth: 3
+Utilities for implementing Modified Preorder Tree Traversal with your
+Django Models and working with trees of Model instances.
 
+Project home: http://github.com/django-mptt/django-mptt/
+
+Documentation: http://django-mptt.github.com/django-mptt/
+
+Discussion group: http://groups.google.com/group/django-mptt-dev
 
 What is Modified Preorder Tree Traversal?
 =========================================

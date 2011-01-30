@@ -42,21 +42,37 @@ class TreeManager(models.Manager):
     """
     A manager for working with trees of objects.
     """
-    def __init__(self, mptt_opts):
+    def __init__(self, mptt_opts=None):
         """
         Tree attributes for the model being managed are held as
         attributes of this manager for later use, since it will be using
         them a **lot**.
         """
         super(TreeManager, self).__init__()
-        self.parent_attr = mptt_opts.parent_attr
-        self.left_attr = mptt_opts.left_attr
-        self.right_attr = mptt_opts.right_attr
-        self.tree_id_attr = mptt_opts.tree_id_attr
-        self.level_attr = mptt_opts.level_attr
+        self._mptt_opts = mptt_opts
+        
+        # these get populated during init_from_model
+        self.parent_attr = None
+        self.left_attr = None
+        self.right_attr = None
+        self.tree_id_attr = None
+        self.level_attr = None
     
-    def contribute_to_class(self, model, name):
-        super(TreeManager, self).contribute_to_class(model, name)
+    def init_from_model(self, model):
+        """
+        Sets things up. This would normally be done in contribute_to_class(),
+        but Django calls that before we've created our extra tree fields on the
+        model (which we need). So it's done here instead, after field setup.
+        """
+        if self._mptt_opts is None:
+            self._mptt_opts = model._mptt_meta
+        
+        self.parent_attr = self._mptt_opts.parent_attr
+        self.left_attr = self._mptt_opts.left_attr
+        self.right_attr = self._mptt_opts.right_attr
+        self.tree_id_attr = self._mptt_opts.tree_id_attr
+        self.level_attr = self._mptt_opts.level_attr
+        
         # Avoid calling "get_field_by_name()", which populates the related
         # models cache and can cause circular imports in complex projects.
         # Instead, find the tree_id field using "get_fields_with_model()".
@@ -161,7 +177,7 @@ class TreeManager(models.Manager):
         return super(TreeManager, self).get_query_set().order_by(
             self.tree_id_attr, self.left_attr)
 
-    def insert_node(self, node, target, position='last-child', save=False):
+    def insert_node(self, node, target, position='last-child', save=False, allow_existing_pk=False):
         """
         Sets up the tree state for ``node`` (which has not yet been
         inserted into in the database) so it will be positioned relative
@@ -179,7 +195,7 @@ class TreeManager(models.Manager):
         if self._base_manager:
             return self._base_manager.insert_node(node, target, position=position, save=save)
         
-        if node.pk:
+        if node.pk and not allow_existing_pk and self.filter(pk=node.pk).exists():
             raise ValueError(_('Cannot insert a node which has already been saved.'))
 
         if target is None:
@@ -208,7 +224,7 @@ class TreeManager(models.Manager):
             setattr(node, self.left_attr, 0)
             setattr(node, self.level_attr, 0)
 
-            space_target, level, left, parent = \
+            space_target, level, left, parent, right_shift = \
                 self._calculate_inter_tree_move_values(node, target, position)
             tree_id = getattr(parent, self.tree_id_attr)
 
@@ -219,6 +235,9 @@ class TreeManager(models.Manager):
             setattr(node, self.level_attr, -level)
             setattr(node, self.tree_id_attr, tree_id)
             setattr(node, self.parent_attr, parent)
+    
+            if parent:
+                self._post_insert_update_cached_parent_right(parent, right_shift)
 
         if save:
             node.save()
@@ -297,6 +316,14 @@ class TreeManager(models.Manager):
             idx += 1
             self._rebuild_helper(pk, 1, idx)
         transaction.commit_unless_managed()
+        
+    def _post_insert_update_cached_parent_right(self, instance, right_shift):
+        setattr(instance, self.right_attr, getattr(instance, self.right_attr) + right_shift)
+        attr = '_%s_cache' % self.parent_attr
+        if hasattr(instance, attr):
+            parent = getattr(instance, attr)
+            if parent:
+                self._post_insert_update_cached_parent_right(parent, right_shift)
 
     def _rebuild_helper(self, pk, left, tree_id, level=0):
         opts = self.model._mptt_meta
@@ -349,7 +376,12 @@ class TreeManager(models.Manager):
             raise ValueError(_('An invalid position was given: %s.') % position)
 
         left_right_change = left - space_target - 1
-        return space_target, level_change, left_right_change, parent
+        
+        right_shift = 0
+        if parent:
+            right_shift = 2 * (node.get_descendant_count() + 1)
+        
+        return space_target, level_change, left_right_change, parent, right_shift
 
     def _close_gap(self, size, target, tree_id):
         """
@@ -623,7 +655,7 @@ class TreeManager(models.Manager):
         level = getattr(node, self.level_attr)
         new_tree_id = getattr(target, self.tree_id_attr)
 
-        space_target, level_change, left_right_change, parent = \
+        space_target, level_change, left_right_change, parent, new_parent_right = \
             self._calculate_inter_tree_move_values(node, target, position)
 
         tree_width = right - left + 1
@@ -641,6 +673,7 @@ class TreeManager(models.Manager):
         setattr(node, self.level_attr, level - level_change)
         setattr(node, self.tree_id_attr, new_tree_id)
         setattr(node, self.parent_attr, parent)
+        
         node._mptt_cached_fields[self.parent_attr] = parent.pk
 
     def _move_child_within_tree(self, node, target, position):
@@ -788,7 +821,7 @@ class TreeManager(models.Manager):
         elif tree_id == new_tree_id:
             raise InvalidMove(_('A node may not be made a child of any of its descendants.'))
 
-        space_target, level_change, left_right_change, parent = \
+        space_target, level_change, left_right_change, parent, right_shift = \
             self._calculate_inter_tree_move_values(node, target, position)
 
         # Create space for the tree which will be inserted

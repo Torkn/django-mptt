@@ -5,7 +5,6 @@ trees.
 from django import template
 from django.db.models import get_model
 from django.db.models.fields import FieldDoesNotExist
-from django.template import loader, Variable
 from django.utils.encoding import force_unicode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
@@ -218,12 +217,21 @@ def cache_tree_children(queryset):
 
     current_path = []
     top_nodes = []
+    
+    if hasattr(queryset, 'order_by'):
+        mptt_opts = queryset.model._mptt_meta
+        tree_id_attr = mptt_opts.tree_id_attr
+        left_attr = mptt_opts.left_attr
+        queryset = queryset.order_by(tree_id_attr, left_attr)
+    
     if queryset:
         root_level = None
         for obj in queryset:
             if root_level == None:
                 root_level = obj.get_level()
             node_level = obj.get_level()
+            if root_level is None:
+                root_level = node_level
             if node_level < root_level:
                 raise ValueError, "cache_tree_children was passed nodes in the wrong order!"
 
