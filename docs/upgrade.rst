@@ -31,14 +31,14 @@ Suppose you start with this::
 
     class Node(models.Model):
         ...
-    
+
     mptt.register(Node, order_insertion_by=['name'], parent_attr='padre')
 
 
 First, Make your model a subclass of ``MPTTModel``, instead of ``models.Model``::
 
     from mptt.models import MPTTModel
-    
+
     class Node(MPTTModel):
         ...
 
@@ -76,12 +76,12 @@ You should always put MPTTModel as the first model base. This is because there's
 complicated metaclass stuff going on behind the scenes, and if Django's model metaclass
 gets called before the MPTT one, strange things can happen.
 
-Isn't multiple inheritance evil? Well, maybe. However, the 
+Isn't multiple inheritance evil? Well, maybe. However, the
 `Django model docs`_ don't forbid this, and as long as your other model doesn't have conflicting methods, it should be fine.
 
 .. note::
    As always when dealing with multiple inheritance, approach with a bit of caution.
-   
+
    Our brief testing says it works, but if you find that the Django internals are somehow
    breaking this approach for you, please `create an issue`_ with specifics.
 

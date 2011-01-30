@@ -8,7 +8,7 @@ you up and running:
 
 .. toctree::
    :maxdepth: 2
-   
+
    overview
    install
 

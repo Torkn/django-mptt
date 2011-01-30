@@ -10,10 +10,10 @@ Setting up a Django model for MPTT
 ==================================
 
 Start with a basic subclass of MPTTModel, something like this::
-   
+
     from django.db import models
     from mptt.models import MPTTModel
-    
+
     class Genre(MPTTModel):
         name = models.CharField(max_length=50, unique=True)
         parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
@@ -36,7 +36,7 @@ To change the names, create an ``MPTTMeta`` class inside your class::
     class Genre(MPTTModel):
         name = models.CharField(max_length=50, unique=True)
         parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
-        
+
         class MPTTMeta:
             level_attr = 'mptt_level'
             order_insertion_by=['name']
@@ -110,7 +110,7 @@ You can't subclass MPTTModel without modifying the Group source. Instead, you ca
 
     import mptt
     from django.contrib.auth.models import Group
-    
+
     mptt.register(Group, order_insertion_by=['name'])
 
 ``mptt.register()`` was removed in 0.4.0 but restored in 0.4.2, when this use case was reported.
