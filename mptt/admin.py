@@ -12,7 +12,7 @@ from django.utils.translation import ugettext as _
 from django.utils.translation import ungettext
 from django.utils.encoding import force_unicode
 
-from mptt.forms import MPTTAdminForm
+from mptt.forms import MPTTAdminForm, TreeNodeChoiceField
 
 __all__ = ('MPTTChangeList', 'MPTTModelAdmin', 'MPTTAdminForm')
 
@@ -34,6 +34,15 @@ class MPTTModelAdmin(ModelAdmin):
     change_list_template = 'admin/mptt_change_list.html'
 
     form = MPTTAdminForm
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        from mptt.models import MPTTModel
+        if issubclass(db_field.rel.to, MPTTModel):
+            return TreeNodeChoiceField(queryset=db_field.rel.to.objects.all(),
+                                       required=False)
+        return super(MPTTModelAdmin, self).formfield_for_foreignkey(db_field,
+                                                                    request,
+                                                                    **kwargs)
 
     def get_changelist(self, request, **kwargs):
         """
@@ -207,5 +216,6 @@ if getattr(settings, 'MPTT_USE_FEINCMS', True):
 
             def get_actions(self, request):
                 actions = super(FeinCMSModelAdmin, self).get_actions(request)
-                actions['delete_selected'] = (self.delete_selected_tree, 'delete_selected', _("Delete selected %(verbose_name_plural)s"))
+                if 'delete_selected' in actions:
+                    actions['delete_selected'] = (self.delete_selected_tree, 'delete_selected', _("Delete selected %(verbose_name_plural)s"))
                 return actions
